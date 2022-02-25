@@ -1,3 +1,17 @@
+
+
+
+
+
+/*
+Notes From Gannon ECE 
+
+Questions: 
+What is manual mode, and how does it relate to brakes.
+
+*/
+
+
 /**********************************************
    @file autorally_chassis.ino
    @author Brian Goldfain <bgoldfai@gmail.com>
@@ -19,6 +33,7 @@
 static_assert(REFRESH_INTERVAL == 4500, "Please set the REFRESH_INTERVAL marco in Servo.h to be 4500");
 
 //input declarations for the RC inputs
+// this is setting the 3 wires for pulling data from the esc
 capture_tc6_declaration();
 capture_tc7_declaration();
 capture_tc8_declaration();
@@ -177,7 +192,11 @@ void setup()
 */
 void loop()
 {
-  //if enough data is available (a command msg is 9 bytes)
+
+
+  //** reading Serial From computer 
+  //** if serial has a message, we check if the data is valid, then write acordingly
+  //if enough data is available (a command msg is 9 bytes)   
   while (Serial.available() >= 9)
   {
     //make sure we are framed at the beginning of a message
@@ -208,11 +227,20 @@ void loop()
       }
     }
   }
+
+  //**---------------------------------
+
+
+
   if(manualMode)
   {
     frontBrakeSrv.writeMicroseconds(frontBrakeSrvNeutralUs);
   }
 
+
+
+  //** Deciding if we want the buzzer to buz "currently flashed an led"
+  //** if the buzzer state is set to correct value, Buzz
   if(buzzerState >= 2) {
     if(timeOfLastBuzz + ((buzzerDutyCycle * 2 * buzzerPeriod) / 6) > millis()) {
       digitalWrite(buzzerPin, HIGH);
@@ -228,6 +256,8 @@ void loop()
       buzzerState++;
       timeOfLastBuzz = millis();
     }
+
+    //** if the runStop Pin 
   } else if(!digitalRead(runStopPin)) {
     if(timeOfLastBuzz + buzzerDutyCycle * buzzerPeriod > millis()) {
       digitalWrite(buzzerPin, HIGH);
@@ -240,6 +270,7 @@ void loop()
     digitalWrite(buzzerPin, LOW);
   }
 
+
   //if no servo msg has been received in a while, set them to neutral
   if (timeOfLastServo + servoTimeoutMs < millis())
   {
@@ -248,9 +279,11 @@ void loop()
     frontBrakeSrv.writeMicroseconds(frontBrakeSrvNeutralUs);
   }
 
+
+
+
   //send wheel speeds and RC input back to compute box
-  if (rpsPublishTime + rpsPublishPeriod < millis())
-  {
+  if (rpsPublishTime + rpsPublishPeriod < millis()){
     rpsPublishTime = millis();
 
     float leftFront, rightFront, leftRear, rightRear;
@@ -270,11 +303,9 @@ void loop()
     uint32_t rc_steer, rc_throttle, rc_frontBrake;
     getRcWidths(rc_steer, rc_throttle, rc_frontBrake);
 
-    if(rc_frontBrake < 1500)
-    {
+    if(rc_frontBrake < 1500){
       manualMode = true;
-    } else
-    {
+    } else{
       manualMode = false;
     }
     
@@ -290,8 +321,7 @@ void loop()
   }
 
   //query ESC data and send it to the compute box
-  if (timeOfCastleLinkData + castleLinkPeriod < millis())
-  {
+  if (timeOfCastleLinkData + castleLinkPeriod < millis()){
     if(castleLinkCurrentRegister >= sizeof(castleLinkRegisters)/sizeof(char)) {
        castleLinkCurrentRegister = 0;
        timeOfCastleLinkData = millis();
@@ -315,6 +345,12 @@ void loop()
     errorMsg[0] = 0;
   }
 }
+
+//**-----------Ebd of Main loop----------------------------------------------------------------------------------------
+
+
+
+
 
 /**
   @brief get timing information for the RC input channels steering, throttle, autonomousEnabled
@@ -441,8 +477,12 @@ void int3()
 
   @note received ESC data is packed into castleLinkData[]
 */
-bool getCastleSerialLinkData()
-{
+
+
+
+
+bool getCastleSerialLinkData(){
+  
   char request[5];
   char response[3];
 
