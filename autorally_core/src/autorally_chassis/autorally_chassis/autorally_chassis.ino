@@ -1,17 +1,3 @@
-
-
-
-
-
-/*
-Notes From Gannon ECE 
-
-Questions: 
-What is manual mode, and how does it relate to brakes.
-
-*/
-
-
 /**********************************************
    @file autorally_chassis.ino
    @author Brian Goldfain <bgoldfai@gmail.com>
@@ -33,7 +19,6 @@ What is manual mode, and how does it relate to brakes.
 static_assert(REFRESH_INTERVAL == 4500, "Please set the REFRESH_INTERVAL marco in Servo.h to be 4500");
 
 //input declarations for the RC inputs
-// this is setting the 3 wires for pulling data from the esc
 capture_tc6_declaration();
 capture_tc7_declaration();
 capture_tc8_declaration();
@@ -187,17 +172,25 @@ void setup()
 
 }
 
+void loop()
+{
+   steerSrv.writeMicroseconds(1700);
+   delay(2000);
+   steerSrv.writeMicroseconds(1500);
+   delay(2000);
+}
+
+
+
+
 /**
   @brief Main body of program, gathers and publishes sensor data.
 */
+/*****************************************************************************************************************
 void loop()
 {
-
-
-  //** reading Serial From computer 
-  //** if serial has a message, we check if the data is valid, then write acordingly
-  //if enough data is available (a command msg is 9 bytes)   
-  while (Serial.available() >= 9)
+  //if enough data is available (a command msg is 9 bytes)
+  while ((Serial.available() >= 9) || 1)
   {
     //make sure we are framed at the beginning of a message
     if (Serial.read() == '#')
@@ -213,10 +206,14 @@ void loop()
           short steer = ((short)buf[0] << 8) + buf[1] & 0xFFFF;
           short throttle = ((short)buf[2] << 8) + buf[3] & 0xFFFF;
           short frontBrake = ((short)buf[4] << 8) + buf[5] & 0xFFFF;
+          //short steer = 1200;
+          //short throttle = throttleSrvNeutralUs;
+          //short frontBrake = frontBrakeSrvNeutralUs;
 
           timeOfLastServo = millis();
 
           //command actuators
+          Serial.print("-----------------Command Actuators------------------\n");
           steerSrv.writeMicroseconds(steer);
           throttleSrv.writeMicroseconds(throttle);
           if(!manualMode)
@@ -227,20 +224,11 @@ void loop()
       }
     }
   }
-
-  //**---------------------------------
-
-
-
   if(manualMode)
   {
     frontBrakeSrv.writeMicroseconds(frontBrakeSrvNeutralUs);
   }
 
-
-
-  //** Deciding if we want the buzzer to buz "currently flashed an led"
-  //** if the buzzer state is set to correct value, Buzz
   if(buzzerState >= 2) {
     if(timeOfLastBuzz + ((buzzerDutyCycle * 2 * buzzerPeriod) / 6) > millis()) {
       digitalWrite(buzzerPin, HIGH);
@@ -256,8 +244,6 @@ void loop()
       buzzerState++;
       timeOfLastBuzz = millis();
     }
-
-    //** if the runStop Pin 
   } else if(!digitalRead(runStopPin)) {
     if(timeOfLastBuzz + buzzerDutyCycle * buzzerPeriod > millis()) {
       digitalWrite(buzzerPin, HIGH);
@@ -270,20 +256,18 @@ void loop()
     digitalWrite(buzzerPin, LOW);
   }
 
-
   //if no servo msg has been received in a while, set them to neutral
   if (timeOfLastServo + servoTimeoutMs < millis())
   {
+    Serial.print("-----------------All servos set to neutral------------------\n");
     steerSrv.writeMicroseconds(steerSrvNeutralUs);
     throttleSrv.writeMicroseconds(throttleSrvNeutralUs);
     frontBrakeSrv.writeMicroseconds(frontBrakeSrvNeutralUs);
   }
 
-
-
-
   //send wheel speeds and RC input back to compute box
-  if (rpsPublishTime + rpsPublishPeriod < millis()){
+  if (rpsPublishTime + rpsPublishPeriod < millis())
+  {
     rpsPublishTime = millis();
 
     float leftFront, rightFront, leftRear, rightRear;
@@ -303,9 +287,11 @@ void loop()
     uint32_t rc_steer, rc_throttle, rc_frontBrake;
     getRcWidths(rc_steer, rc_throttle, rc_frontBrake);
 
-    if(rc_frontBrake < 1500){
+    if(rc_frontBrake < 1500)
+    {
       manualMode = true;
-    } else{
+    } else
+    {
       manualMode = false;
     }
     
@@ -320,9 +306,12 @@ void loop()
     Serial.print('\n');
   }
 
+
   //query ESC data and send it to the compute box
-  if (timeOfCastleLinkData + castleLinkPeriod < millis()){
+  if (timeOfCastleLinkData + castleLinkPeriod < millis())
+  {
     if(castleLinkCurrentRegister >= sizeof(castleLinkRegisters)/sizeof(char)) {
+       Serial.print("-----------------Set current register to 0 in ESC query------------------\n");
        castleLinkCurrentRegister = 0;
        timeOfCastleLinkData = millis();
        Serial.print("#c");
@@ -345,13 +334,7 @@ void loop()
     errorMsg[0] = 0;
   }
 }
-
-//**-----------Ebd of Main loop----------------------------------------------------------------------------------------
-
-
-
-
-
+*****************************************************************************************************************/
 /**
   @brief get timing information for the RC input channels steering, throttle, autonomousEnabled
   @param[out] rc_1 RC steering pulse width in us
@@ -477,12 +460,9 @@ void int3()
 
   @note received ESC data is packed into castleLinkData[]
 */
-
-
-
-
-bool getCastleSerialLinkData(){
-  
+bool getCastleSerialLinkData()
+{
+  Serial.print("-----------------getCastleSerialLinkData()------------------\n");
   char request[5];
   char response[3];
 
@@ -540,5 +520,6 @@ bool getCastleSerialLinkData(){
 */
 char castleChecksum(char* msg)
 {
+  Serial.print("-----------------castleChecksum()------------------\n");
   return (0 - (msg[0] + msg[1] + msg[2] + msg[3]));
 }
